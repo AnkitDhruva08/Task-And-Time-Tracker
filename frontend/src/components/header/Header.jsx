@@ -41,10 +41,11 @@ const Header = () => {
   if (error) return <div className="text-red-600 text-center">{error}</div>;
   if (!userData) return <div className="text-center">Loading...</div>;
 
-  const { is_employee, is_manager, employee_name, username } = userData;
+  const { is_employee, is_manager, employee_name,manager_name, username } = userData;
 
-  const displayName = is_employee ? employee_name || "Employee" : username || "User";
-  const email = userData?.email || "example@example.com"; // You can add the email field in the response from the backend
+  const displayName = is_employee ? employee_name : is_manager ? manager_name  : "User";
+
+  const email = userData?.email || "example@example.com";
   const firstLetter = displayName.charAt(0).toUpperCase();
 
   return (

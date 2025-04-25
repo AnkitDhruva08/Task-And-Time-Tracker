@@ -2,8 +2,14 @@ import { useEffect, useState } from "react";
 import Header from "../components/header/Header";
 import Swal from "sweetalert2";
 import Select from 'react-select';
+import { FaMoneyBill } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import StatusDropdown from "../components/StatusDropdown";
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 
+// Registering Chart.js components
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -51,6 +57,8 @@ const ManagerDashboard = () => {
       if (!response.ok) {
         throw new Error("Unauthorized");
       }
+
+      
 
       const data = await response.json();
       console.log("tasks ===>>", data);
@@ -154,6 +162,25 @@ const ManagerDashboard = () => {
     }
   };
 
+
+   // Create chart data based on tasks
+   const chartData = {
+    labels: ['Approved', 'Pending', 'Rejected'],
+    datasets: [
+      {
+        label: 'Hours Spent',
+        data: [
+          filteredTasks.filter((task) => task.status === 'approved').reduce((sum, task) => sum + task.hours_spent, 0),
+          filteredTasks.filter((task) => task.status === 'pending').reduce((sum, task) => sum + task.hours_spent, 0),
+          filteredTasks.filter((task) => task.status === 'rejected').reduce((sum, task) => sum + task.hours_spent, 0)
+        ],
+        backgroundColor: ['#4CAF50', '#FFEB3B', '#F44336'],
+        borderColor: ['#388E3C', '#FBC02D', '#D32F2F'],
+        borderWidth: 1,
+      }
+    ]
+  };
+
   const handleEmployeeFormChange = (e) => {
     const { name, value } = e.target;
     setEmployeeForm((prevForm) => ({
@@ -208,10 +235,41 @@ const ManagerDashboard = () => {
     fetchTasks();
   }, []);
 
+
+    //  sidde bar links 
+    const sidebarLinks = [
+      {
+        name: "Add Employee",
+        icon: <FaMoneyBill />,
+        onClick: () => setShowModal(true), 
+      },
+    ];
+  
+
   return (
-    <div className="p-6">
-      <Header />
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen flex bg-gray-100">
+         {/* Sidebar */}
+         <aside className="w-64 bg-gray-900 text-white flex flex-col py-6 px-4 shadow-lg">
+        <div className="text-2xl font-bold mb-8 text-center">Dashboard</div>
+        <nav className="flex-1 space-y-4">
+          {sidebarLinks.map((item) => (
+            <Link
+              key={item.name}
+              to={item.path}
+              className="flex items-center px-2 py-2 rounded hover:bg-gray-700 transition text-lg"
+            >
+              <span className="mr-3">{item.icon}</span>
+              {item.name}
+            </Link>
+          ))}
+        </nav>
+        </aside>
+         {/* Main Panel */}
+         <div className="flex-1 flex flex-col">
+        <Header />
+      
+        <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Manager Dashboard</h1>
         <button
           onClick={() => setShowModal(true)}
@@ -219,6 +277,44 @@ const ManagerDashboard = () => {
         >
           + Add Employee
         </button>
+      </div>
+
+       {/* Chart for Hours Spent */}
+       <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-4">Task Hours Analysis by Status</h2>
+        <div className="bg-white p-4 rounded shadow">
+          <Bar data={chartData} options={{
+            responsive: true,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Hours Spent Per Task Status'
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(tooltipItem) {
+                    return `${tooltipItem.dataset.label}: ${tooltipItem.raw} hours`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Task Status'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Hours'
+                },
+                beginAtZero: true
+              }
+            }
+          }} />
+        </div>
       </div>
 
       {/* Filters */}
@@ -458,6 +554,9 @@ const ManagerDashboard = () => {
           </div>
         </div>
       )}
+        </div>
+        </div>
+   
     </div>
   );
 };
