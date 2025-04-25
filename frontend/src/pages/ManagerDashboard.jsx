@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import Header from "../components/header/Header";
 import Swal from "sweetalert2";
+import Select from 'react-select';
+import StatusDropdown from "../components/StatusDropdown";
+
 
 const statusColors = {
-  Pending: "bg-yellow-100 text-yellow-800",
-  Approved: "bg-green-100 text-green-800",
-  Rejected: "bg-red-100 text-red-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  approved: "bg-green-100 text-green-800",
+  rejected: "bg-red-100 text-red-800",
 };
 
 const ManagerDashboard = () => {
@@ -234,16 +237,7 @@ const ManagerDashboard = () => {
           value={filter.tags} 
           onChange={(e) => setFilter({ ...filter, tags: e.target.value })}
         />
-        <select
-          className="p-2 border rounded"
-          value={filter.status}
-          onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
+         <StatusDropdown filter={filter} setFilter={setFilter} />
         <input
           type="date"
           className="p-2 border rounded"
@@ -310,16 +304,16 @@ const ManagerDashboard = () => {
                         setSuccess(null);
                       }}
                       title="View & Update"
-                      className="text-blue-600 hover:text-blue-800"
+                      className="bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600 transition"
                     >
-                      👁️
+                      View
                     </button>
                     <button
                       onClick={() => handleDelete(task.id)}
                       title="Delete Task"
-                      className="text-red-600 hover:text-red-800"
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
                     >
-                      🗑️
+                      Delete
                     </button>
                   </td>
                 </tr>

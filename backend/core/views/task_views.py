@@ -6,6 +6,7 @@ from core.models import Task
 from core.serializers import TaskSerializer
 from django.db import models 
 from django.db.models import F
+from django.shortcuts import get_object_or_404
 
 
 
@@ -62,10 +63,24 @@ class TaskListView(APIView):
             print('pk ==<<<>>', pk)
             print('request.data ==<<<>>', request.data)
 
-            task = Task.objects.get(id=pk)
+            task = get_object_or_404(Task, id=pk)
             print('task ==<<<>>', task)
 
-            serializer = TaskSerializer(task, data=request.data, partial=True)
+            user = request.user
+            print('user ==<<<>>', user)
+
+            # Get the EmployeeProfile associated with the user
+            employee_profile = getattr(user, 'employeeprofile', None)
+
+            data = request.data.copy()
+
+            # Check user role and modify data accordingly
+            if employee_profile and employee_profile.is_employee:
+                print('User  is an employee, updating task status to pending.')
+                data['status'] = 'pending'
+                data['manager_comments'] = ''  # Make comment empty
+
+            serializer = TaskSerializer(task, data=data, partial=True)
             print('serializer ===<<>>', serializer)
 
             if serializer.is_valid():
@@ -77,6 +92,7 @@ class TaskListView(APIView):
 
         except Task.DoesNotExist:
             return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+
         
 
     def delete( self, request, pk):

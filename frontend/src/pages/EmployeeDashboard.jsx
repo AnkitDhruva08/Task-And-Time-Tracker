@@ -1,7 +1,7 @@
 // EmployeeDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaMoneyBill, FaUser, FaFileAlt, FaPhoneAlt, FaHome, FaCalendarAlt } from 'react-icons/fa';
+import { FaMoneyBill } from 'react-icons/fa';
 import TaskLogForm from './TaskLogForm';
 import TaskTable from './TaskTable';
 import Header from '../components/header/Header';
@@ -10,6 +10,13 @@ const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [viewTask, setViewTask] = useState(null);
+  const [comment, setComment] = useState("");
+  const [statusUpdate, setStatusUpdate] = useState("");
+  const [editTask, setEditTask] = useState(null);
+  const [updatedData, setUpdatedData] = useState({});
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const validateTaskHours = (taskData) => {
     const totalHoursToday = tasks
@@ -23,6 +30,22 @@ const EmployeeDashboard = () => {
     return true;
   };
 
+  const openEditModal = (task) => {
+    setEditTask(task);
+    setUpdatedData({ ...task}); 
+  };
+
+  const openViewModal = (task) => {
+    setViewTask(task);
+    setStatusUpdate(task.status);
+    setComment(task.manager_comments || '');
+    setError(null);
+    setSuccess(null);
+  
+
+  }
+
+//  for fetching the records from the server
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -40,8 +63,6 @@ const EmployeeDashboard = () => {
       }
 
       const data = await response.json();
-      console.log('tasks ===>>', data);
-
       if (Array.isArray(data)) {
         setTasks(data);
       } else {
@@ -58,12 +79,12 @@ const EmployeeDashboard = () => {
     fetchTasks();
   }, []);
 
+
+  //  function for add task 
   const addTask = (taskData) => {
-    if (!validateTaskHours(taskData)) return; 
+    if (!validateTaskHours(taskData)) return;
 
     setLoading(true);
-
-    // Simulating an API response:
     setTimeout(() => {
       const newTask = { ...taskData, id: Date.now(), status: 'Pending' };
       setTasks([...tasks, newTask]);
@@ -72,6 +93,41 @@ const EmployeeDashboard = () => {
     }, 1000);
   };
 
+  // for update the task 
+  const updateTask = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:8000/api/tasks/${editTask.id}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...updatedData
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to update task");
+      }
+  
+      const updated = await response.json();
+      updated.tags = typeof updated.tags === "string" ? updated.tags.split(",") : updated.tags;
+  
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setEditTask(null); // Close the modal
+      alert("Task updated!");
+  
+      // Refresh the page
+      window.location.reload();
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Could not update task.");
+    }
+  };
+
+  //  sidde bar links 
   const sidebarLinks = [
     { name: "Add Task", path: "/add-task", icon: <FaMoneyBill /> },
   ];
@@ -95,12 +151,12 @@ const EmployeeDashboard = () => {
         </nav>
       </aside>
 
-      {/* ✅ Header Component */}
+      {/* Main Panel */}
       <div className="flex-1 flex flex-col">
         <Header />
 
-        {/* Main Content */}
         <div className="container mx-auto p-6">
+  
           <div className="mb-4">
             {/* Add Task Button */}
             <button
@@ -111,10 +167,9 @@ const EmployeeDashboard = () => {
             </button>
           </div>
 
-          {/* Task Table */}
-          <TaskTable tasks={tasks} setTasks={setTasks} /> {/* Display the Task Table */}
+          <TaskTable tasks={tasks} setTasks={setTasks} onEdit={openEditModal} onView={openViewModal}/>
 
-          {/* Modal for adding task */}
+          {/* Add Task Modal */}
           {showModal && (
             <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
               <div className="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -124,15 +179,133 @@ const EmployeeDashboard = () => {
                     onClick={() => setShowModal(false)}
                     className="text-gray-500 text-lg"
                   >
-                    &times; {/* Close Icon */}
+                    &times;
                   </button>
                 </div>
-
-                {/* Task Log Form */}
                 <TaskLogForm addTask={addTask} loading={loading} />
               </div>
             </div>
           )}
+
+          {/* Edit Task Modal */}
+          {editTask && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+              <div className="bg-white p-6 rounded-2xl w-full max-w-lg shadow-lg">
+                <h2 className="text-2xl font-bold text-blue-700 mb-4">Edit Task</h2>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateTask();
+                  }}
+                  className="space-y-4"
+                >
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="Title"
+                    value={updatedData.title || ""}
+                    onChange={(e) => setUpdatedData({ ...updatedData, title: e.target.value })}
+                  />
+                  <textarea
+                    className="w-full p-2 border rounded"
+                    placeholder="Description"
+                    value={updatedData.description || ""}
+                    onChange={(e) => setUpdatedData({ ...updatedData, description: e.target.value })}
+                  />
+                  <input
+                    type="date"
+                    className="w-full p-2 border rounded"
+                    value={updatedData.date || ""}
+                    onChange={(e) => setUpdatedData({ ...updatedData, date: e.target.value })}
+                  />
+                  <input
+                    type="number"
+                    step="0.25"
+                    className="w-full p-2 border rounded"
+                    placeholder="Hours Spent"
+                    value={updatedData.hours_spent || ""}
+                    onChange={(e) => setUpdatedData({ ...updatedData, hours_spent: parseFloat(e.target.value) })}
+                  />
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="Tags (comma separated)"
+                    value={updatedData.tags || ""}
+                    onChange={(e) => setUpdatedData({ ...updatedData, tags: e.target.value })}
+                  />
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditTask(null)}
+                      className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Update Task
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+  {/*  view task  */}
+
+{viewTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-lg shadow-lg">
+            <h2 className="text-2xl font-bold text-blue-700 mb-4">Task Review</h2>
+
+            <div className="space-y-3 text-sm">
+              <p><strong>Employee:</strong> {viewTask.employee}</p>
+              <p><strong>Title:</strong> {viewTask.title}</p>
+              <p><strong>Description:</strong> {viewTask.description}</p>
+              <p><strong>Hours:</strong> {viewTask.hours_spent}</p>
+              <p><strong>Tags:</strong> {(Array.isArray(viewTask.tags) ? viewTask.tags : []).join(", ")}</p>
+              <p><strong>Date:</strong> {viewTask.date}</p>
+
+              <div>
+                <label className="font-medium">Status</label>
+                <select
+                  className="w-full p-2 border rounded mt-1"
+                  value={statusUpdate}
+                  onChange={(e) => setStatusUpdate(e.target.value)}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-medium">Manager Comment</label>
+                <textarea
+                  rows="3"
+                  className="w-full p-2 border rounded mt-1"
+                  placeholder="Add your comment..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                />
+              </div>
+
+              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {success && <p className="text-green-600 text-sm">{success}</p>}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setViewTask(null)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         </div>
       </div>
     </div>
